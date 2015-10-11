@@ -23,23 +23,6 @@
 
         android:ems="10"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="From :"
-        android:id="@+id/textView2"
-        android:layout_below="@+id/editText"
-        />
-
-    <AutoCompleteTextView
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/FromAuto"
-        android:layout_below="@+id/textView2"
-
-        android:ems="10"/>
-
 
     <Button
         android:layout_width="wrap_content"
@@ -47,7 +30,7 @@
         android:text="Calculate"
         android:id="@+id/button"
         android:onClick=""
-        android:layout_below="@+id/FromAuto"
+        android:layout_below="@+id/editText"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
     <TextView
@@ -55,28 +38,25 @@
         android:layout_width="wrap_content"
         android:layout_height="fill_parent"
         android:text="@string/hello_world"
-        android:layout_alignBaseline="@+id/button"
-        android:layout_alignBottom="@+id/button"
         android:layout_toRightOf="@+id/button"
-        android:layout_toEndOf="@+id/button" />
+        android:layout_toEndOf="@+id/button"
+        android:layout_above="@+id/mapfragment"
+        android:layout_below="@+id/editText" />
     <fragment
         android:id="@+id/mapfragment"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         class="com.here.android.mpa.mapping.MapFragment"
-        android:layout_below="@+id/button"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/button"
+        android:layout_above="@+id/record" />
 
-    <ToggleButton
+    <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Sound"
-        android:id="@+id/toggleButton"
-        android:layout_below="@+id/mapfragment"
-        android:layout_alignRight="@+id/mapfragment"
-        android:layout_alignEnd="@+id/mapfragment"
-        android:layout_marginRight="73dp"
-        android:layout_marginEnd="73dp" />
-
+        android:text="New Button"
+        android:id="@+id/record"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true" />
 </RelativeLayout>

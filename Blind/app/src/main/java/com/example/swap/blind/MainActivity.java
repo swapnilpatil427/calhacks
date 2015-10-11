@@ -1,6 +1,9 @@
 package com.example.swap.blind;
 import java.io.FilterReader;
 import java.lang.*;
+
+import android.os.Handler;
+import android.speech.tts.UtteranceProgressListener;
 import android.widget.AdapterView.OnItemClickListener;
 import android.content.Context;
 import android.support.v7.app.AppCompatActivity;
@@ -35,7 +38,14 @@ import org.json.JSONObject;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import android.content.Intent;
+import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.view.Menu;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -45,6 +55,7 @@ import android.speech.tts.TextToSpeech;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.net.URLEncoder;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
     private static final String LOG_TAG = "Google Places Autocomplete";
@@ -53,15 +64,20 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private static final String OUT_JSON = "/json";
     private static final String API_KEY = "AIzaSyBY-cp1LFymi4qew5_kY4ixWgtUcnV8UTQ";
     private static TextToSpeech tts;
-    private Button btnSpeak;
     private Map map = null;
+
+    private TextView txtSpeechInput;
+    private Button btnSpeak;
+    private final int REQ_CODE_SPEECH_INPUT = 100;
+
+
 private  String text="";
     // map fragment embedded in this activity
     private MapFragment mapFragment = null;
 
     // TextView for displaying the current map scheme
     private TextView textViewResult = null;
-
+    private AutoCompleteTextView autoCompView;
     // MapRoute for this activity
     private static MapRoute mapRoute = null;
     @Override
@@ -69,8 +85,27 @@ private  String text="";
         super.onCreate(savedInstanceState);
         tts = new TextToSpeech(this, this);
         setContentView(R.layout.activity_main);
-        AutoCompleteTextView autoCompView = (AutoCompleteTextView) findViewById(R.id.editText);
+        text = "Welcome, Please Enter the Location you want to go to";
+        speakOut();
+       autoCompView = (AutoCompleteTextView) findViewById(R.id.editText);
         Button btn = (Button) findViewById(R.id.button);
+
+        txtSpeechInput = (TextView) findViewById(R.id.textView);
+        btnSpeak = (Button) findViewById(R.id.record);
+
+        // hide the action bar
+       // getActionBar().hide();
+        promptSpeechInput();
+//        btnSpeak.setOnClickListener(new View.OnClickListener() {
+//
+//            @Override
+//            public void onClick(View v) {
+//                promptSpeechInput();
+//            }
+//        });
+
+
+
         btn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 getDirections(v);
@@ -78,8 +113,61 @@ private  String text="";
             }
         });
         autoCompView.setAdapter(new GooglePlacesAutocompleteAdapter(this, android.R.layout.simple_list_item_1));
-        //  autoCompView.setOnItemClickListener(OnItemClickListener,);
+        autoCompView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view,
+                                    int position, long id) {
+                autoCompView.setText((String) parent.getItemAtPosition(position));
+            }
+        });
+
     }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        switch (requestCode) {
+            case REQ_CODE_SPEECH_INPUT: {
+                if (resultCode == RESULT_OK && null != data) {
+
+                    ArrayList<String> result = data
+                            .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    autoCompView.setText(result.get(0).toCharArray(),0,result.get(0).length());
+                  //  txtSpeechInput.setText(result.get(0));
+                }
+                break;
+            }
+
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+       // getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    private void promptSpeechInput() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+                getString(R.string.speech_prompt));
+        try {
+            startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
+        } catch (Exception a) {
+            Toast.makeText(getApplicationContext(),
+                    getString(R.string.speech_not_supported),
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
 
     //////////////////////////////////////////
 // map embedded in the map fragment
@@ -192,7 +280,22 @@ private  String text="";
         if (status == TextToSpeech.SUCCESS) {
 
             int result = tts.setLanguage(Locale.US);
+            tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                @Override
+                public void onStart(String utteranceId) {
 
+                }
+
+                @Override
+                public void onDone(String utteranceId) {
+                   text = "Done";
+                }
+
+                @Override
+                public void onError(String utteranceId) {
+                   text = "Error";
+                }
+            });
             if (result == TextToSpeech.LANG_MISSING_DATA
                     || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.e("TTS", "This Language is not supported");
@@ -207,12 +310,9 @@ private  String text="";
 
     }
 
-    public void onItemClick(AdapterView adapterView, View view, int position, long id) {
-        String str = (String) adapterView.getItemAtPosition(position);
-        Toast.makeText(this, str, Toast.LENGTH_SHORT).show();
-    }
 
-    public static ArrayList autocomplete(String input) {
+
+    public  ArrayList autocomplete(String input) {
         ArrayList resultList = null;
 
         HttpURLConnection conn = null;
@@ -220,8 +320,8 @@ private  String text="";
         try {
             StringBuilder sb = new StringBuilder(PLACES_API_BASE + TYPE_AUTOCOMPLETE + OUT_JSON);
             sb.append("?key=" + API_KEY);
-            sb.append("&components=country:gr");
-            sb.append("&input="+input.replace(" ","%20"));
+        //    sb.append("&components=country:gr");
+            sb.append("&input=" + URLEncoder.encode(input, "utf-8"));
 
             URL url = new URL(sb.toString());
             conn = (HttpURLConnection) url.openConnection();
@@ -256,6 +356,8 @@ private  String text="";
                 System.out.println(predsJsonArray.getJSONObject(i).getString("description"));
                 System.out.println("============================================================");
                 resultList.add(predsJsonArray.getJSONObject(i).getString("description"));
+                speaksuggestions(predsJsonArray.getJSONObject(i).getString("description").toString());
+
             }
         } catch (JSONException e) {
             // Log.e(LOG_TAG, "Cannot process JSON results", e);
@@ -263,8 +365,21 @@ private  String text="";
 
         return resultList;
     }
-
-
+    private Runnable mMyRunnable = new Runnable()
+    {
+        @Override
+        public void run()
+        {
+            //Change state here
+        }
+    };
+public void speaksuggestions(String suggestion)
+{
+    text = suggestion;
+    speakOut();
+    Handler myHandler = new Handler();
+    myHandler.postDelayed(mMyRunnable, 4000);//Message will be delivered in 1 second.
+}
 
 
     class GooglePlacesAutocompleteAdapter extends ArrayAdapter implements Filterable {
